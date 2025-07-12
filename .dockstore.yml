@@ -1,8 +1,8 @@
 version: 1.2
 workflows:
   - subclass: WDL
-    name: FilterAndMergeVCFs
-    primaryDescriptorPath: /FilterAndMergeVCFs.wdl
+    name: CJS_FilterMerge
+    primaryDescriptorPath: /CJS_FilterMerge.wdl
     description: |
       A WDL workflow to extract, filter, fix ploidy, and merge VCF files from a Google Cloud bucket.
       Designed for pre-processing input into MoChA and supports runtime-configurable memory and CPU.
