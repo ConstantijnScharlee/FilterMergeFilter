@@ -17,9 +17,12 @@ workflow FilterAndMergeVCFs {
     String merge_memory
   }
 
-  Array[String] sample_ids = read_lines(sample_list_tsv)
+  call ReadSampleList {
+    input:
+      sample_list_tsv = sample_list_tsv
+  }
 
-  scatter (sample_id in sample_ids) {
+  scatter (sample_id in ReadSampleList.sample_ids) {
     call DownloadVCF {
       input:
         sample_id = sample_id,
@@ -63,6 +66,26 @@ workflow FilterAndMergeVCFs {
   }
 }
 
+task ReadSampleList {
+  input {
+    File sample_list_tsv
+  }
+
+  command <<< 
+    cat ${sample_list_tsv}
+  >>>
+
+  output {
+    Array[String] sample_ids = read_lines(sample_list_tsv)
+  }
+
+  runtime {
+    cpu: 1
+    memory: "500M"
+    docker: "ubuntu:latest"
+  }
+}
+
 task DownloadVCF {
   input {
     String sample_id
@@ -70,6 +93,7 @@ task DownloadVCF {
   }
 
   command <<<
+    echo "Fetching: ${gcs_input_prefix}/${sample_id}/${sample_id}.hard-filtered.vcf.gz"
     gsutil cp ${gcs_input_prefix}/${sample_id}/${sample_id}.hard-filtered.vcf.gz .
     gsutil cp ${gcs_input_prefix}/${sample_id}/${sample_id}.hard-filtered.vcf.gz.tbi .
   >>>
@@ -144,6 +168,7 @@ task UploadToGCS {
   }
 
   command <<<
+    echo "Uploading: ${sample_id}_HET_FP.vcf.gz to ${gcs_output_prefix}"
     gsutil cp ${file_to_upload} ${gcs_output_prefix}/${sample_id}_HET_FP.vcf.gz
     gsutil cp ${file_to_upload}.tbi ${gcs_output_prefix}/${sample_id}_HET_FP.vcf.gz.tbi
   >>>
@@ -168,6 +193,7 @@ task MergeAndIndexVCFs {
   }
 
   command <<<
+    echo "Merging VCFs: ${sep=' ' vcfs_to_merge}"
     bcftools merge -Oz -o ${output_name} ${sep=' ' vcfs_to_merge}
     tabix -p vcf ${output_name}
   >>>
